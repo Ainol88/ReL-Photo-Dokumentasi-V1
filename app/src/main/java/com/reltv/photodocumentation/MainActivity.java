@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams sheetParams=new LinearLayout.LayoutParams(screenW,previewH);sheetParams.bottomMargin=dp(12);content.addView(sheet,sheetParams);
             Paint titlePaint=new Paint(Paint.ANTI_ALIAS_FLAG);titlePaint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));titlePaint.setTextSize(pdfTitleSize);
             String heading=titleInput.getText().toString().trim();String[] lines=wrappedTitle(heading,titlePaint,pageW-2f*pdfMargin);
-            TextView title=text(android.text.TextUtils.join("\\n",lines),Math.max(9,Math.round(titlePaint.getTextSize()*scale)),ink);title.setTypeface(null,1);title.setGravity(Gravity.CENTER);title.setIncludeFontPadding(false);sheet.addView(title,new LinearLayout.LayoutParams(-1,-2));
+            TextView title=text(android.text.TextUtils.join("\n",lines),Math.max(9,Math.round(titlePaint.getTextSize()*scale)),ink);title.setTypeface(null,1);title.setGravity(Gravity.CENTER);title.setIncludeFontPadding(false);title.setOnClickListener(v->showTitleEditor(title));sheet.addView(title,new LinearLayout.LayoutParams(-1,-2));
             int start=page*perPage,end=Math.min(photos.size(),start+perPage);
             int cols=landscape?(perPage<=2?perPage:(perPage<=4?2:3)):(perPage<=2?1:2);
             int rows=(int)Math.ceil((double)perPage/cols);
@@ -187,9 +187,12 @@ public class MainActivity extends Activity {
     }
     private void createPdf(String requestedName){syncCaptions();if(photos.size()==0){toast("Tambahkan sekurang-kurangnya satu foto.");return;}saveDraft();PdfDocument doc=new PdfDocument();int pageNo=0;boolean landscape=isLandscape();final int W=landscape?842:595,H=landscape?595:842;int perPage=selectedCount();Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         try{for(int start=0;start<photos.size();start+=perPage){pageNo++;PdfDocument.Page page=doc.startPage(new PdfDocument.PageInfo.Builder(W,H,pageNo).create());Canvas c=page.getCanvas();c.drawColor(Color.WHITE);
-            p.setColor(Color.rgb(25,43,67));p.setTextSize(pdfTitleSize);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));String heading=titleInput.getText().toString().trim();if(heading.isEmpty())heading="Dokumentasi Kegiatan";while(p.measureText(heading)>W-(pdfMargin*2)&&p.getTextSize()>9)p.setTextSize(p.getTextSize()-1);float titleWidth=p.measureText(heading);float titleBaseline=Math.max(pdfMargin+pdfTitleSize,(pdfMargin+pdfTitleSize));c.drawText(heading,Math.max(pdfMargin,(W-titleWidth)/2),titleBaseline,p);
+            p.setColor(Color.rgb(25,43,67));p.setTextSize(pdfTitleSize);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+            String heading=titleInput.getText().toString().trim();String[] titleLines=wrappedTitle(heading,p,W-2f*pdfMargin);
+            float baseline=pdfMargin+p.getTextSize();float lineStep=p.getTextSize()*1.2f;
+            for(String line:titleLines){float tw=p.measureText(line);c.drawText(line,(W-tw)/2f,baseline,p);baseline+=lineStep;}
             int cols,rows;if(landscape){cols=perPage<=2?perPage:(perPage<=4?2:3);rows=(int)Math.ceil((double)perPage/cols);}else{cols=perPage<=2?1:2;rows=(int)Math.ceil((double)perPage/cols);}
-            float left=pdfMargin,top=pdfMargin+pdfTitleSize+pdfTitleGap,right=W-pdfMargin,bottom=H-pdfMargin,gap=pdfGap;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
+            float left=pdfMargin,top=pdfMargin+titleLines.length*lineStep+pdfTitleGap,right=W-pdfMargin,bottom=H-pdfMargin,gap=pdfGap;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
             for(int slot=0;slot<perPage;slot++){int idx=start+slot;if(idx>=photos.size())break;int col=slot%cols,row=slot/cols;float x=left+col*(cellW+gap),y=top+row*(cellH+gap);
                 Bitmap bmp=loadBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),photos.get(idx).scale,p);bmp.recycle();
             }
