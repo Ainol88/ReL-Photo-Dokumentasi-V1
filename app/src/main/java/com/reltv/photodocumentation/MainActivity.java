@@ -23,7 +23,8 @@ public class MainActivity extends Activity {
     private final ArrayList<PhotoItem> photos=new ArrayList<>();
     private final ArrayList<EditText> captionInputs=new ArrayList<>();
     private Uri cameraUri;
-    private int ink=Color.rgb(25,43,67), teal=Color.rgb(0,137,145), orange=Color.rgb(242,139,54);\n    private int pdfTitleSize=18,pdfMargin=24,pdfGap=10,pdfInset=0,pdfTitleGap=20;
+    private int ink=Color.rgb(25,43,67), teal=Color.rgb(0,137,145), orange=Color.rgb(242,139,54);
+    private int pdfTitleSize=18,pdfMargin=24,pdfGap=10,pdfInset=0,pdfTitleGap=20;
     static class PhotoItem { Uri uri; String caption; PhotoItem(Uri u,String c){uri=u;caption=c;} }
 
     @Override public void onCreate(Bundle b){super.onCreate(b);buildUI();loadDraft();renderPhotos();}
@@ -59,7 +60,9 @@ public class MainActivity extends Activity {
         actions.addView(gallery,new LinearLayout.LayoutParams(0,dp(50),1));View gap=new View(this);actions.addView(gap,new LinearLayout.LayoutParams(dp(10),1));actions.addView(camera,new LinearLayout.LayoutParams(0,dp(50),1));root.addView(actions);
         gallery.setOnClickListener(v->pickImages());camera.setOnClickListener(v->takePhoto());
         photoList=new LinearLayout(this);photoList.setOrientation(LinearLayout.VERTICAL);root.addView(photoList);
-        addGap(root,16);section("04","Pengaturan dan cetak","Atur tampilan PDF sebelum disimpan");\n        LinearLayout editCard=card();Button layout=button("EDIT TATA LETAK PDF",ink);editCard.addView(layout,new LinearLayout.LayoutParams(-1,dp(48)));root.addView(editCard);layout.setOnClickListener(v->showLayoutEditor());\n        addGap(root,10);
+        addGap(root,16);section("04","Pengaturan dan cetak","Atur tampilan PDF sebelum disimpan");
+        LinearLayout editCard=card();Button layout=button("EDIT TATA LETAK PDF",ink);editCard.addView(layout,new LinearLayout.LayoutParams(-1,dp(48)));root.addView(editCard);layout.setOnClickListener(v->showLayoutEditor());
+        addGap(root,10);
         LinearLayout saveCard=card();Button save=button("SIMPAN DRAF",ink),preview=button("LIHAT PREVIEW",orange),pdf=button("BUAT PDF A4",teal);
         saveCard.addView(save,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(50));vp.topMargin=dp(9);saveCard.addView(preview,vp);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(54));pp.topMargin=dp(9);saveCard.addView(pdf,pp);root.addView(saveCard);
         save.setOnClickListener(v->{saveDraft();toast("Draf dokumentasi tersimpan di telefon.");});preview.setOnClickListener(v->showPreview());pdf.setOnClickListener(v->askPdfFileName());
