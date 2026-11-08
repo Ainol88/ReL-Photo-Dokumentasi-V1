@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
     private Uri cameraUri;
     private int ink=Color.rgb(25,43,67), teal=Color.rgb(0,137,145), orange=Color.rgb(242,139,54);
     private int pdfTitleSize=18,pdfMargin=24,pdfGap=10,pdfInset=0,pdfTitleGap=20;
-    static class PhotoItem { Uri uri; String caption; PhotoItem(Uri u,String c){uri=u;caption=c;} }
+    static class PhotoItem { Uri uri; String caption; float scale=1f; PhotoItem(Uri u,String c){uri=u;caption=c;} }
 
     @Override public void onCreate(Bundle b){super.onCreate(b);buildUI();loadDraft();renderPhotos();}
     private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
@@ -89,8 +89,8 @@ public class MainActivity extends Activity {
         }
     }
     private void syncCaptions(){for(int i=0;i<Math.min(photos.size(),captionInputs.size());i++)photos.get(i).caption=captionInputs.get(i).getText().toString();}
-    private void saveDraft(){syncCaptions();try{org.json.JSONArray arr=new org.json.JSONArray();for(PhotoItem p:photos){org.json.JSONObject o=new org.json.JSONObject();o.put("uri",p.uri.toString());o.put("caption",p.caption);arr.put(o);}org.json.JSONObject j=new org.json.JSONObject();j.put("title",titleInput.getText().toString());j.put("photos",arr);j.put("count",selectedCount());j.put("orientation",isLandscape()?"landscape":"portrait");getSharedPreferences("draft_v2",0).edit().putString("data",j.toString()).apply();savePdfSettings();}catch(Exception e){toast("Gagal menyimpan draf.");}}
-    private void loadDraft(){try{String raw=getSharedPreferences("draft_v2",0).getString("data",null);if(raw==null)return;org.json.JSONObject o=new org.json.JSONObject(raw);titleInput.setText(o.optString("title"));countSpinner.setSelection(Math.max(0,Math.min(4,o.optInt("count",2)-2)));orientationSpinner.setSelection("landscape".equals(o.optString("orientation"))?1:0);loadPdfSettings();org.json.JSONArray a=o.optJSONArray("photos");if(a!=null)for(int i=0;i<a.length();i++){org.json.JSONObject p=a.getJSONObject(i);photos.add(new PhotoItem(Uri.parse(p.getString("uri")),p.optString("caption")));}}catch(Exception ignored){}}
+    private void saveDraft(){syncCaptions();try{org.json.JSONArray arr=new org.json.JSONArray();for(PhotoItem p:photos){org.json.JSONObject o=new org.json.JSONObject();o.put("uri",p.uri.toString());o.put("caption",p.caption);o.put("scale",p.scale);arr.put(o);}org.json.JSONObject j=new org.json.JSONObject();j.put("title",titleInput.getText().toString());j.put("photos",arr);j.put("count",selectedCount());j.put("orientation",isLandscape()?"landscape":"portrait");getSharedPreferences("draft_v2",0).edit().putString("data",j.toString()).apply();savePdfSettings();}catch(Exception e){toast("Gagal menyimpan draf.");}}
+    private void loadDraft(){try{String raw=getSharedPreferences("draft_v2",0).getString("data",null);if(raw==null)return;org.json.JSONObject o=new org.json.JSONObject(raw);titleInput.setText(o.optString("title"));countSpinner.setSelection(Math.max(0,Math.min(4,o.optInt("count",2)-2)));orientationSpinner.setSelection("landscape".equals(o.optString("orientation"))?1:0);loadPdfSettings();org.json.JSONArray a=o.optJSONArray("photos");if(a!=null)for(int i=0;i<a.length();i++){org.json.JSONObject p=a.getJSONObject(i);PhotoItem item=new PhotoItem(Uri.parse(p.getString("uri")),p.optString("caption"));item.scale=(float)Math.max(0.6,Math.min(1.4,p.optDouble("scale",1.0)));photos.add(item);}}catch(Exception ignored){}}
 
     private void showPreview(){
         syncCaptions();
@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(12),dp(12),dp(12),dp(12));content.setBackgroundColor(Color.rgb(238,242,246));sc.addView(content);
         for(int page=0;page<pageCount;page++){
             LinearLayout sheet=new LinearLayout(this);sheet.setOrientation(LinearLayout.VERTICAL);sheet.setPadding(dp(12),dp(12),dp(12),dp(12));sheet.setBackground(shape(Color.WHITE,8));
-            TextView title=text(titleInput.getText().toString().trim().isEmpty()?"Dokumentasi Kegiatan":titleInput.getText().toString().trim(),16,ink);title.setTypeface(null,1);title.setGravity(Gravity.CENTER);sheet.addView(title);
+            TextView title=text(titleInput.getText().toString().trim().isEmpty()?"Dokumentasi Kegiatan":titleInput.getText().toString().trim(),pdfTitleSize,ink);title.setTypeface(null,1);title.setGravity(Gravity.CENTER);title.setOnClickListener(v->showTitleEditor(title));sheet.addView(title);
             int start=page*perPage,end=Math.min(photos.size(),start+perPage);
             int cols=landscape?(perPage<=2?perPage:(perPage<=4?2:3)):(perPage<=2?1:2);
             LinearLayout row=null;
@@ -109,6 +109,7 @@ public class MainActivity extends Activity {
                 if((i-start)%cols==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(8);sheet.addView(row,rp);}
                 ImageView img=new ImageView(this);img.setScaleType(ImageView.ScaleType.FIT_CENTER);img.setBackgroundColor(Color.rgb(246,247,249));
                 try{img.setImageURI(photos.get(i).uri);}catch(Exception ignored){}
+                img.setScaleX(photos.get(i).scale);img.setScaleY(photos.get(i).scale);img.setOnClickListener(v->showPhotoEditor(index));
                 LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(0,dp(landscape?95:125),1);ip.setMargins(dp(3),dp(2),dp(3),dp(2));row.addView(img,ip);
             }
             LinearLayout.LayoutParams pageParams=new LinearLayout.LayoutParams(-1,-2);pageParams.bottomMargin=dp(12);content.addView(sheet,pageParams);
@@ -124,6 +125,24 @@ public class MainActivity extends Activity {
         addSetting(panel,"Ruang tepi foto (0–30)",0,30,pdfInset,3);
         addSetting(panel,"Jarak judul ke foto (8–50)",8,50,pdfTitleGap,4);
         new AlertDialog.Builder(this).setTitle("Edit tata letak PDF").setView(panel).setNegativeButton("Batal",null).setPositiveButton("Simpan pengaturan",(d,w)->{savePdfSettings();toast("Pengaturan tata letak disimpan.");}).show();
+    }
+    private void showTitleEditor(TextView previewTitle){
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(10),dp(18),dp(6));
+        TextView sample=text(titleInput.getText().toString().trim().isEmpty()?"Dokumentasi Kegiatan":titleInput.getText().toString().trim(),pdfTitleSize,ink);sample.setTypeface(null,1);sample.setGravity(Gravity.CENTER);panel.addView(sample);
+        TextView value=text("Ukuran tulisan: "+pdfTitleSize,13,ink);LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,-2);vp.topMargin=dp(12);panel.addView(value,vp);
+        SeekBar bar=new SeekBar(this);bar.setMax(20);bar.setProgress(Math.max(0,Math.min(20,pdfTitleSize-12)));panel.addView(bar);
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){pdfTitleSize=12+progress;value.setText("Ukuran tulisan: "+pdfTitleSize);sample.setTextSize(pdfTitleSize);}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});
+        new AlertDialog.Builder(this).setTitle("Atur tulisan judul").setMessage("Geser untuk memperbesar atau memperkecil tulisan.").setView(panel).setNegativeButton("Batal",(d,w)->{loadPdfSettings();}).setPositiveButton("Terapkan",(d,w)->{previewTitle.setTextSize(pdfTitleSize);savePdfSettings();}).show();
+    }
+    private void showPhotoEditor(int index){
+        if(index<0||index>=photos.size())return;
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(10),dp(18),dp(6));
+        ImageView sample=new ImageView(this);sample.setScaleType(ImageView.ScaleType.FIT_CENTER);try{sample.setImageURI(photos.get(index).uri);}catch(Exception ignored){}
+        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(150));panel.addView(sample,ip);
+        TextView value=text("Ukuran foto: "+Math.round(photos.get(index).scale*100)+"%",13,ink);LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,-2);vp.topMargin=dp(10);panel.addView(value,vp);
+        SeekBar bar=new SeekBar(this);bar.setMax(80);bar.setProgress(Math.max(0,Math.min(80,Math.round((photos.get(index).scale-0.6f)*100))));panel.addView(bar);
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){float z=0.6f+progress/100f;sample.setScaleX(z);sample.setScaleY(z);value.setText("Ukuran foto: "+Math.round(z*100)+"%");}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});
+        new AlertDialog.Builder(this).setTitle("Atur ukuran foto "+(index+1)).setMessage("Geser ke kiri untuk mengecilkan dan ke kanan untuk memperbesar.").setView(panel).setNeutralButton("Reset",(d,w)->{photos.get(index).scale=1f;saveDraft();showPreview();}).setNegativeButton("Batal",null).setPositiveButton("Terapkan",(d,w)->{photos.get(index).scale=0.6f+bar.getProgress()/100f;saveDraft();showPreview();}).show();
     }
     private void addSetting(LinearLayout panel,String label,int min,int max,int value,int type){
         TextView tv=text(label+" : "+value,13,ink);panel.addView(tv);
@@ -149,12 +168,12 @@ public class MainActivity extends Activity {
             int cols,rows;if(landscape){cols=perPage<=2?perPage:(perPage<=4?2:3);rows=(int)Math.ceil((double)perPage/cols);}else{cols=perPage<=2?1:2;rows=(int)Math.ceil((double)perPage/cols);}
             float left=pdfMargin,top=pdfMargin+pdfTitleSize+pdfTitleGap,right=W-pdfMargin,bottom=H-pdfMargin,gap=pdfGap;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
             for(int slot=0;slot<perPage;slot++){int idx=start+slot;if(idx>=photos.size())break;int col=slot%cols,row=slot/cols;float x=left+col*(cellW+gap),y=top+row*(cellH+gap);
-                Bitmap bmp=loadBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),p);bmp.recycle();
+                Bitmap bmp=loadBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),photos.get(idx).scale,p);bmp.recycle();
             }
             doc.finishPage(page);}
             String safeName=requestedName.replaceAll("[\\\\/:*?\\\"<>|]","_").trim();if(!safeName.toLowerCase(Locale.ROOT).endsWith(".pdf"))safeName+=".pdf";String filename=safeName;ContentValues values=new ContentValues();values.put(MediaStore.Downloads.DISPLAY_NAME,filename);values.put(MediaStore.Downloads.MIME_TYPE,"application/pdf");values.put(MediaStore.Downloads.RELATIVE_PATH,"Download/ReL TV Documentation");Uri out=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(out==null)throw new Exception("Tidak dapat membuat fail PDF");try(OutputStream os=getContentResolver().openOutputStream(out)){doc.writeTo(os);}toast("PDF berjaya disimpan dalam Download/ReL TV Documentation.");
         }catch(Exception e){toast("PDF gagal dibuat: "+e.getMessage());}finally{doc.close();}}
-    private void drawFit(Canvas c,Bitmap b,float x,float y,float w,float h,Paint p){float scale=Math.min(w/b.getWidth(),h/b.getHeight());float dw=b.getWidth()*scale,dh=b.getHeight()*scale;float dx=x+(w-dw)/2,dy=y+(h-dh)/2;p.setColor(Color.WHITE);c.drawRect(x,y,x+w,y+h,p);p.setColor(Color.DKGRAY);c.drawBitmap(b,null,new RectF(dx,dy,dx+dw,dy+dh),p);}
+    private void drawFit(Canvas c,Bitmap b,float x,float y,float w,float h,float zoom,Paint p){float base=Math.min(w/b.getWidth(),h/b.getHeight());float factor=base*Math.max(0.6f,Math.min(1.4f,zoom));float dw=b.getWidth()*factor,dh=b.getHeight()*factor;float dx=x+(w-dw)/2,dy=y+(h-dh)/2;p.setColor(Color.WHITE);c.drawRect(x,y,x+w,y+h,p);int save=c.save();c.clipRect(x,y,x+w,y+h);p.setColor(Color.DKGRAY);c.drawBitmap(b,null,new RectF(dx,dy,dx+dw,dy+dh),p);c.restoreToCount(save);}
     private void drawWrapped(Canvas c,String value,float x,float y,float width,float height,Paint p){if(value==null||value.trim().isEmpty())value="Tiada keterangan.";String[] words=value.split("\\s+");String line="";float yy=y,step=12;for(String word:words){String test=line.isEmpty()?word:line+" "+word;if(p.measureText(test)>width){if(yy>y+height-step)break;if(!line.isEmpty())c.drawText(line,x,yy,p);line=word;yy+=step;}else line=test;}if(!line.isEmpty()&&yy<=y+height)c.drawText(line,x,yy,p);}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 }
