@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
     private final ArrayList<PhotoItem> photos=new ArrayList<>();
     private final ArrayList<EditText> captionInputs=new ArrayList<>();
     private Uri cameraUri;
-    private int ink=Color.rgb(25,43,67), teal=Color.rgb(0,137,145), orange=Color.rgb(242,139,54);
+    private int ink=Color.rgb(25,43,67), teal=Color.rgb(0,137,145), orange=Color.rgb(242,139,54);\n    private int pdfTitleSize=18,pdfMargin=24,pdfGap=10,pdfInset=0,pdfTitleGap=20;
     static class PhotoItem { Uri uri; String caption; PhotoItem(Uri u,String c){uri=u;caption=c;} }
 
     @Override public void onCreate(Bundle b){super.onCreate(b);buildUI();loadDraft();renderPhotos();}
@@ -59,10 +59,10 @@ public class MainActivity extends Activity {
         actions.addView(gallery,new LinearLayout.LayoutParams(0,dp(50),1));View gap=new View(this);actions.addView(gap,new LinearLayout.LayoutParams(dp(10),1));actions.addView(camera,new LinearLayout.LayoutParams(0,dp(50),1));root.addView(actions);
         gallery.setOnClickListener(v->pickImages());camera.setOnClickListener(v->takePhoto());
         photoList=new LinearLayout(this);photoList.setOrientation(LinearLayout.VERTICAL);root.addView(photoList);
-        addGap(root,16);section("04","Simpan dan cetak","PDF akan mengikuti bingkai kolase yang dipilih");
+        addGap(root,16);section("04","Pengaturan dan cetak","Atur tampilan PDF sebelum disimpan");\n        LinearLayout editCard=card();Button layout=button("EDIT TATA LETAK PDF",ink);editCard.addView(layout,new LinearLayout.LayoutParams(-1,dp(48)));root.addView(editCard);layout.setOnClickListener(v->showLayoutEditor());\n        addGap(root,10);
         LinearLayout saveCard=card();Button save=button("SIMPAN DRAF",ink),preview=button("LIHAT PREVIEW",orange),pdf=button("BUAT PDF A4",teal);
         saveCard.addView(save,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(50));vp.topMargin=dp(9);saveCard.addView(preview,vp);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(54));pp.topMargin=dp(9);saveCard.addView(pdf,pp);root.addView(saveCard);
-        save.setOnClickListener(v->{saveDraft();toast("Draf dokumentasi tersimpan di telefon.");});preview.setOnClickListener(v->showPreview());pdf.setOnClickListener(v->createPdf());
+        save.setOnClickListener(v->{saveDraft();toast("Draf dokumentasi tersimpan di telefon.");});preview.setOnClickListener(v->showPreview());pdf.setOnClickListener(v->askPdfFileName());
         TextView footer=text("ReL PHOTO DOKUMENTASI  •  V2",10,Color.GRAY);footer.setGravity(Gravity.CENTER);LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,-2);fp.topMargin=dp(18);root.addView(footer,fp);
     }
     private LinearLayout statCard(String big,String small,int accent){LinearLayout c=card();TextView n=text(big,22,accent);n.setTypeface(null,1);c.addView(n);TextView s=text(small,9,ink);s.setTypeface(null,1);c.addView(s);return c;}
@@ -86,8 +86,8 @@ public class MainActivity extends Activity {
         }
     }
     private void syncCaptions(){for(int i=0;i<Math.min(photos.size(),captionInputs.size());i++)photos.get(i).caption=captionInputs.get(i).getText().toString();}
-    private void saveDraft(){syncCaptions();try{org.json.JSONArray arr=new org.json.JSONArray();for(PhotoItem p:photos){org.json.JSONObject o=new org.json.JSONObject();o.put("uri",p.uri.toString());o.put("caption",p.caption);arr.put(o);}org.json.JSONObject j=new org.json.JSONObject();j.put("title",titleInput.getText().toString());j.put("photos",arr);j.put("count",selectedCount());j.put("orientation",isLandscape()?"landscape":"portrait");getSharedPreferences("draft_v2",0).edit().putString("data",j.toString()).apply();}catch(Exception e){toast("Gagal menyimpan draf.");}}
-    private void loadDraft(){try{String raw=getSharedPreferences("draft_v2",0).getString("data",null);if(raw==null)return;org.json.JSONObject o=new org.json.JSONObject(raw);titleInput.setText(o.optString("title"));countSpinner.setSelection(Math.max(0,Math.min(4,o.optInt("count",2)-2)));orientationSpinner.setSelection("landscape".equals(o.optString("orientation"))?1:0);org.json.JSONArray a=o.optJSONArray("photos");if(a!=null)for(int i=0;i<a.length();i++){org.json.JSONObject p=a.getJSONObject(i);photos.add(new PhotoItem(Uri.parse(p.getString("uri")),p.optString("caption")));}}catch(Exception ignored){}}
+    private void saveDraft(){syncCaptions();try{org.json.JSONArray arr=new org.json.JSONArray();for(PhotoItem p:photos){org.json.JSONObject o=new org.json.JSONObject();o.put("uri",p.uri.toString());o.put("caption",p.caption);arr.put(o);}org.json.JSONObject j=new org.json.JSONObject();j.put("title",titleInput.getText().toString());j.put("photos",arr);j.put("count",selectedCount());j.put("orientation",isLandscape()?"landscape":"portrait");getSharedPreferences("draft_v2",0).edit().putString("data",j.toString()).apply();savePdfSettings();}catch(Exception e){toast("Gagal menyimpan draf.");}}
+    private void loadDraft(){try{String raw=getSharedPreferences("draft_v2",0).getString("data",null);if(raw==null)return;org.json.JSONObject o=new org.json.JSONObject(raw);titleInput.setText(o.optString("title"));countSpinner.setSelection(Math.max(0,Math.min(4,o.optInt("count",2)-2)));orientationSpinner.setSelection("landscape".equals(o.optString("orientation"))?1:0);loadPdfSettings();org.json.JSONArray a=o.optJSONArray("photos");if(a!=null)for(int i=0;i<a.length();i++){org.json.JSONObject p=a.getJSONObject(i);photos.add(new PhotoItem(Uri.parse(p.getString("uri")),p.optString("caption")));}}catch(Exception ignored){}}
 
     private void showPreview(){
         syncCaptions();
@@ -110,19 +110,46 @@ public class MainActivity extends Activity {
             }
             LinearLayout.LayoutParams pageParams=new LinearLayout.LayoutParams(-1,-2);pageParams.bottomMargin=dp(12);content.addView(sheet,pageParams);
         }
-        new AlertDialog.Builder(this).setTitle("Preview dokumen • "+pageCount+" halaman").setView(sc).setNegativeButton("Tutup",null).setPositiveButton("Buat PDF", (d,w)->createPdf()).show();
+        new AlertDialog.Builder(this).setTitle("Preview dokumen • "+pageCount+" halaman").setView(sc).setNegativeButton("Tutup",null).setNeutralButton("Edit tata letak",(d,w)->showLayoutEditor()).setPositiveButton("Simpan PDF",(d,w)->askPdfFileName()).show();
     }
     private Bitmap loadBitmap(Uri uri)throws Exception{try(InputStream in=getContentResolver().openInputStream(uri)){Bitmap b=BitmapFactory.decodeStream(in);if(b==null)throw new Exception("Foto tidak dapat dibaca");return b;}}
-    private void createPdf(){syncCaptions();if(photos.size()==0){toast("Tambahkan sekurang-kurangnya satu foto.");return;}saveDraft();PdfDocument doc=new PdfDocument();int pageNo=0;boolean landscape=isLandscape();final int W=landscape?842:595,H=landscape?595:842;int perPage=selectedCount();Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+    private void showLayoutEditor(){
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(8),dp(18),dp(4));
+        addSetting(panel,"Ukuran judul (12–24)",12,24,pdfTitleSize,0);
+        addSetting(panel,"Margin halaman (12–60)",12,60,pdfMargin,1);
+        addSetting(panel,"Jarak antar foto (4–24)",4,24,pdfGap,2);
+        addSetting(panel,"Ruang tepi foto (0–30)",0,30,pdfInset,3);
+        addSetting(panel,"Jarak judul ke foto (8–50)",8,50,pdfTitleGap,4);
+        new AlertDialog.Builder(this).setTitle("Edit tata letak PDF").setView(panel).setNegativeButton("Batal",null).setPositiveButton("Simpan pengaturan",(d,w)->{savePdfSettings();toast("Pengaturan tata letak disimpan.");}).show();
+    }
+    private void addSetting(LinearLayout panel,String label,int min,int max,int value,int type){
+        TextView tv=text(label+" : "+value,13,ink);panel.addView(tv);
+        SeekBar bar=new SeekBar(this);bar.setMax(max-min);bar.setProgress(value-min);panel.addView(bar);
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int progress,boolean fromUser){int v=min+progress;tv.setText(label+" : "+v);switch(type){case 0:pdfTitleSize=v;break;case 1:pdfMargin=v;break;case 2:pdfGap=v;break;case 3:pdfInset=v;break;case 4:pdfTitleGap=v;break;}}
+            public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
+        });
+    }
+    private void savePdfSettings(){getSharedPreferences("draft_v2",0).edit().putInt("pdfTitleSize",pdfTitleSize).putInt("pdfMargin",pdfMargin).putInt("pdfGap",pdfGap).putInt("pdfInset",pdfInset).putInt("pdfTitleGap",pdfTitleGap).apply();}
+    private void loadPdfSettings(){android.content.SharedPreferences p=getSharedPreferences("draft_v2",0);pdfTitleSize=p.getInt("pdfTitleSize",18);pdfMargin=p.getInt("pdfMargin",24);pdfGap=p.getInt("pdfGap",10);pdfInset=p.getInt("pdfInset",0);pdfTitleGap=p.getInt("pdfTitleGap",20);}
+    private void askPdfFileName(){
+        if(photos.size()==0){toast("Tambahkan sekurang-kurangnya satu foto.");return;}
+        EditText name=field("Contoh: Dokumentasi Kegiatan");
+        name.setText("Dokumentasi_"+new SimpleDateFormat("yyyyMMdd_HHmm",Locale.US).format(new Date()));
+        new AlertDialog.Builder(this).setTitle("Nama file PDF").setMessage("Masukkan nama file sebelum disimpan.").setView(name).setNegativeButton("Batal",null).setPositiveButton("Simpan PDF",(d,w)->{
+            String filename=name.getText().toString().trim();if(filename.isEmpty()){toast("Nama file belum diisi.");return;}createPdf(filename);
+        }).show();
+    }
+    private void createPdf(String requestedName){syncCaptions();if(photos.size()==0){toast("Tambahkan sekurang-kurangnya satu foto.");return;}saveDraft();PdfDocument doc=new PdfDocument();int pageNo=0;boolean landscape=isLandscape();final int W=landscape?842:595,H=landscape?595:842;int perPage=selectedCount();Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         try{for(int start=0;start<photos.size();start+=perPage){pageNo++;PdfDocument.Page page=doc.startPage(new PdfDocument.PageInfo.Builder(W,H,pageNo).create());Canvas c=page.getCanvas();c.drawColor(Color.WHITE);
-            p.setColor(Color.rgb(25,43,67));p.setTextSize(19);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));String heading=titleInput.getText().toString().trim();if(heading.isEmpty())heading="Dokumentasi Kegiatan";float titleWidth=p.measureText(heading);c.drawText(heading,Math.max(24,(W-titleWidth)/2),38,p);
+            p.setColor(Color.rgb(25,43,67));p.setTextSize(pdfTitleSize);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));String heading=titleInput.getText().toString().trim();if(heading.isEmpty())heading="Dokumentasi Kegiatan";while(p.measureText(heading)>W-(pdfMargin*2)&&p.getTextSize()>9)p.setTextSize(p.getTextSize()-1);float titleWidth=p.measureText(heading);float titleBaseline=Math.max(pdfMargin+pdfTitleSize,(pdfMargin+pdfTitleSize));c.drawText(heading,Math.max(pdfMargin,(W-titleWidth)/2),titleBaseline,p);
             int cols,rows;if(landscape){cols=perPage<=2?perPage:(perPage<=4?2:3);rows=(int)Math.ceil((double)perPage/cols);}else{cols=perPage<=2?1:2;rows=(int)Math.ceil((double)perPage/cols);}
-            float left=24,top=58,right=W-24,bottom=H-24,gap=10;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
+            float left=pdfMargin,top=pdfMargin+pdfTitleSize+pdfTitleGap,right=W-pdfMargin,bottom=H-pdfMargin,gap=pdfGap;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
             for(int slot=0;slot<perPage;slot++){int idx=start+slot;if(idx>=photos.size())break;int col=slot%cols,row=slot/cols;float x=left+col*(cellW+gap),y=top+row*(cellH+gap);
-                Bitmap bmp=loadBitmap(photos.get(idx).uri);drawFit(c,bmp,x,y,cellW,cellH,p);bmp.recycle();
+                Bitmap bmp=loadBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),p);bmp.recycle();
             }
             doc.finishPage(page);}
-            String filename="ReLTV_Dokumentasi_"+new SimpleDateFormat("yyyyMMdd_HHmm",Locale.US).format(new Date())+".pdf";ContentValues values=new ContentValues();values.put(MediaStore.Downloads.DISPLAY_NAME,filename);values.put(MediaStore.Downloads.MIME_TYPE,"application/pdf");values.put(MediaStore.Downloads.RELATIVE_PATH,"Download/ReL TV Documentation");Uri out=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(out==null)throw new Exception("Tidak dapat membuat fail PDF");try(OutputStream os=getContentResolver().openOutputStream(out)){doc.writeTo(os);}toast("PDF berjaya disimpan dalam Download/ReL TV Documentation.");
+            String safeName=requestedName.replaceAll("[\\\\/:*?\\\"<>|]","_").trim();if(!safeName.toLowerCase(Locale.ROOT).endsWith(".pdf"))safeName+=".pdf";String filename=safeName;ContentValues values=new ContentValues();values.put(MediaStore.Downloads.DISPLAY_NAME,filename);values.put(MediaStore.Downloads.MIME_TYPE,"application/pdf");values.put(MediaStore.Downloads.RELATIVE_PATH,"Download/ReL TV Documentation");Uri out=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(out==null)throw new Exception("Tidak dapat membuat fail PDF");try(OutputStream os=getContentResolver().openOutputStream(out)){doc.writeTo(os);}toast("PDF berjaya disimpan dalam Download/ReL TV Documentation.");
         }catch(Exception e){toast("PDF gagal dibuat: "+e.getMessage());}finally{doc.close();}}
     private void drawFit(Canvas c,Bitmap b,float x,float y,float w,float h,Paint p){float scale=Math.min(w/b.getWidth(),h/b.getHeight());float dw=b.getWidth()*scale,dh=b.getHeight()*scale;float dx=x+(w-dw)/2,dy=y+(h-dh)/2;p.setColor(Color.WHITE);c.drawRect(x,y,x+w,y+h,p);p.setColor(Color.DKGRAY);c.drawBitmap(b,null,new RectF(dx,dy,dx+dw,dy+dh),p);}
     private void drawWrapped(Canvas c,String value,float x,float y,float width,float height,Paint p){if(value==null||value.trim().isEmpty())value="Tiada keterangan.";String[] words=value.split("\\s+");String line="";float yy=y,step=12;for(String word:words){String test=line.isEmpty()?word:line+" "+word;if(p.measureText(test)>width){if(yy>y+height-step)break;if(!line.isEmpty())c.drawText(line,x,yy,p);line=word;yy+=step;}else line=test;}if(!line.isEmpty()&&yy<=y+height)c.drawText(line,x,yy,p);}
