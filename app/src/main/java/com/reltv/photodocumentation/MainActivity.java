@@ -140,6 +140,23 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Preview dokumen • "+pageCount+" halaman").setView(sc).setNegativeButton("Tutup",null).setPositiveButton("Simpan PDF",(d,w)->askPdfFileName()).show();
     }
     private Bitmap loadBitmap(Uri uri)throws Exception{try(InputStream in=getContentResolver().openInputStream(uri)){Bitmap b=BitmapFactory.decodeStream(in);if(b==null)throw new Exception("Foto tidak dapat dibaca");return b;}}
+    // Compress only the PDF copy; original gallery photos remain untouched.
+    private Bitmap loadCompressedBitmap(Uri uri)throws Exception{
+        BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
+        try(InputStream in=getContentResolver().openInputStream(uri)){BitmapFactory.decodeStream(in,null,bounds);}
+        if(bounds.outWidth<=0||bounds.outHeight<=0)throw new Exception("Foto tidak dapat dibaca");
+        int sample=1;while(Math.max(bounds.outWidth/sample,bounds.outHeight/sample)>1440)sample*=2;
+        BitmapFactory.Options opts=new BitmapFactory.Options();opts.inSampleSize=sample;opts.inPreferredConfig=Bitmap.Config.ARGB_8888;
+        Bitmap original;try(InputStream in=getContentResolver().openInputStream(uri)){original=BitmapFactory.decodeStream(in,null,opts);}
+        if(original==null)throw new Exception("Foto tidak dapat diproses");
+        java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();
+        if(!original.compress(Bitmap.CompressFormat.JPEG,78,bytes)){original.recycle();throw new Exception("Kompresi foto gagal");}
+        byte[] data=bytes.toByteArray();original.recycle();
+        Bitmap compressed=BitmapFactory.decodeByteArray(data,0,data.length);
+        if(compressed==null)throw new Exception("Foto hasil kompresi tidak dapat dibaca");
+        return compressed;
+    }
+
     private void showLayoutEditor(){
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(8),dp(18),dp(4));
         addSetting(panel,"Ukuran judul (12–24)",12,24,pdfTitleSize,0);
@@ -194,7 +211,7 @@ public class MainActivity extends Activity {
             int cols,rows;if(landscape){cols=perPage<=2?perPage:(perPage<=4?2:3);rows=(int)Math.ceil((double)perPage/cols);}else{cols=perPage<=2?1:2;rows=(int)Math.ceil((double)perPage/cols);}
             float left=pdfMargin,top=pdfMargin+titleLines.length*lineStep+pdfTitleGap,right=W-pdfMargin,bottom=H-pdfMargin,gap=pdfGap;float cellW=(right-left-gap*(cols-1))/cols;float cellH=(bottom-top-gap*(rows-1))/rows;
             for(int slot=0;slot<perPage;slot++){int idx=start+slot;if(idx>=photos.size())break;int col=slot%cols,row=slot/cols;float x=left+col*(cellW+gap),y=top+row*(cellH+gap);
-                Bitmap bmp=loadBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),photos.get(idx).scale,p);bmp.recycle();
+                Bitmap bmp=loadCompressedBitmap(photos.get(idx).uri);float inset=Math.min(pdfInset,Math.min(cellW,cellH)/4f);drawFit(c,bmp,x+inset,y+inset,Math.max(1,cellW-2*inset),Math.max(1,cellH-2*inset),photos.get(idx).scale,p);bmp.recycle();
             }
             doc.finishPage(page);}
             String safeName=requestedName.replaceAll("[\\\\/:*?\\\"<>|]","_").trim();if(!safeName.toLowerCase(Locale.ROOT).endsWith(".pdf"))safeName+=".pdf";String filename=safeName;ContentValues values=new ContentValues();values.put(MediaStore.Downloads.DISPLAY_NAME,filename);values.put(MediaStore.Downloads.MIME_TYPE,"application/pdf");values.put(MediaStore.Downloads.RELATIVE_PATH,"Download/ReL TV Documentation");Uri out=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(out==null)throw new Exception("Tidak dapat membuat fail PDF");try(OutputStream os=getContentResolver().openOutputStream(out)){doc.writeTo(os);}toast("PDF berjaya disimpan dalam Download/ReL TV Documentation.");
