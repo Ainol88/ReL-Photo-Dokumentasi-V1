@@ -107,9 +107,9 @@ public class MainActivity extends Activity {
             LinearLayout row=null;
             for(int i=start;i<end;i++){
                 if((i-start)%cols==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(8);sheet.addView(row,rp);}
-                ImageView img=new ImageView(this);img.setScaleType(ImageView.ScaleType.FIT_CENTER);img.setBackgroundColor(Color.rgb(246,247,249));
+                final int photoIndex=i;ImageView img=new ImageView(this);img.setScaleType(ImageView.ScaleType.FIT_CENTER);img.setBackgroundColor(Color.rgb(246,247,249));
                 try{img.setImageURI(photos.get(i).uri);}catch(Exception ignored){}
-                img.setScaleX(photos.get(i).scale);img.setScaleY(photos.get(i).scale);img.setOnClickListener(v->showPhotoEditor(index));
+                img.setScaleX(photos.get(i).scale);img.setScaleY(photos.get(i).scale);img.setOnClickListener(v->showPhotoEditor(photoIndex));
                 LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(0,dp(landscape?95:125),1);ip.setMargins(dp(3),dp(2),dp(3),dp(2));row.addView(img,ip);
             }
             LinearLayout.LayoutParams pageParams=new LinearLayout.LayoutParams(-1,-2);pageParams.bottomMargin=dp(12);content.addView(sheet,pageParams);
