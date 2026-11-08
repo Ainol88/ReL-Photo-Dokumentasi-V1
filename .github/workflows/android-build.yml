@@ -3,6 +3,9 @@ name: Build ReL Photo Dokumentasi V2 APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - v2-development
 
 permissions:
   contents: read
@@ -39,5 +42,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ReL-Photo-Dokumentasi-V2-1-APK
+          name: ReL-Photo-Dokumentasi-V2-2-APK
           path: app/build/outputs/apk/debug/ReL-Photo-Dokumentasi.apk
