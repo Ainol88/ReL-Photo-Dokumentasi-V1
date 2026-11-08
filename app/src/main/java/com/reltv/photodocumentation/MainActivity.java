@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
         TextView brand=text("ReL  /  DOKUMENTASI",12,0xFFBCE8E8);brand.setLetterSpacing(.08f);hero.addView(brand);
         TextView heading=text("Photo Dokumentasi",25,Color.WHITE);heading.setTypeface(null,1);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.topMargin=dp(7);hero.addView(heading,hp);
         TextView sub=text("Catat kegiatan. Susun foto. Cetak laporan.",12,0xFFE1F4F4);LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,-2);sp.topMargin=dp(5);hero.addView(sub,sp);
-        TextView chip=text("  A4  •  PDF  •  KOLASE 2–6 FOTO  ",11,Color.WHITE);chip.setPadding(dp(8),dp(8),dp(8),dp(8));chip.setBackground(shape(0x334FFFFFF,30));LinearLayout.LayoutParams chp=new LinearLayout.LayoutParams(-2,-2);chp.topMargin=dp(16);hero.addView(chip,chp);root.addView(hero);
+        TextView chip=text("  A4  •  PDF  •  KOLASE 2–6 FOTO  ",11,Color.WHITE);chip.setPadding(dp(8),dp(8),dp(8),dp(8));chip.setBackground(shape(0x33FFFFFF,30));LinearLayout.LayoutParams chp=new LinearLayout.LayoutParams(-2,-2);chp.topMargin=dp(16);hero.addView(chip,chp);root.addView(hero);
         addGap(root,14);
         LinearLayout stats=new LinearLayout(this);stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.addView(statCard("01","ATURAN KOLASE",teal),new LinearLayout.LayoutParams(0,-2,1));
