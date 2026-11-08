@@ -128,11 +128,11 @@ public class MainActivity extends Activity {
     }
     private void showTitleEditor(TextView previewTitle){
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(10),dp(18),dp(6));
-        TextView sample=text(titleInput.getText().toString().trim().isEmpty()?"Dokumentasi Kegiatan":titleInput.getText().toString().trim(),pdfTitleSize,ink);sample.setTypeface(null,1);sample.setGravity(Gravity.CENTER);panel.addView(sample);
+        EditText titleEdit=field("Ketik judul dokumentasi");titleEdit.setText(titleInput.getText().toString());panel.addView(titleEdit);
         TextView value=text("Ukuran tulisan: "+pdfTitleSize,13,ink);LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,-2);vp.topMargin=dp(12);panel.addView(value,vp);
         SeekBar bar=new SeekBar(this);bar.setMax(20);bar.setProgress(Math.max(0,Math.min(20,pdfTitleSize-12)));panel.addView(bar);
-        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){pdfTitleSize=12+progress;value.setText("Ukuran tulisan: "+pdfTitleSize);sample.setTextSize(pdfTitleSize);}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});
-        new AlertDialog.Builder(this).setTitle("Atur tulisan judul").setMessage("Geser untuk memperbesar atau memperkecil tulisan.").setView(panel).setNegativeButton("Batal",(d,w)->{loadPdfSettings();}).setPositiveButton("Terapkan",(d,w)->{previewTitle.setTextSize(pdfTitleSize);savePdfSettings();}).show();
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){pdfTitleSize=12+progress;value.setText("Ukuran tulisan: "+pdfTitleSize);}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});
+        new AlertDialog.Builder(this).setTitle("Edit judul dan ukuran tulisan").setMessage("Ketuk kolom untuk mengubah judul, lalu geser untuk mengatur ukurannya.").setView(panel).setNegativeButton("Batal",(d,w)->{loadPdfSettings();}).setPositiveButton("Terapkan",(d,w)->{String t=titleEdit.getText().toString().trim();titleInput.setText(t);previewTitle.setText(t.isEmpty()?"Dokumentasi Kegiatan":t);previewTitle.setTextSize(pdfTitleSize);saveDraft();}).show();
     }
     private void showPhotoEditor(int index){
         if(index<0||index>=photos.size())return;
